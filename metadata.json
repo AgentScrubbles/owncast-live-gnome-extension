@@ -1,0 +1,16 @@
+{
+  "name": "OwncastLive Panel",
+  "description": "Monitor your favorite Owncast streamers and get notified when they go live",
+  "uuid": "OwncastLive_Panel@extensions.owncastlive",
+  "shell-version": [
+    "42",
+    "43",
+    "44",
+    "45",
+    "46",
+    "47"
+  ],
+  "version": 1,
+  "url": "https://github.com/owncast/owncastlive-extension",
+  "settings-schema": "org.gnome.shell.extensions.owncastlive"
+}

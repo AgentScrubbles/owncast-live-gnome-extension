@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+  <schema id="org.gnome.shell.extensions.owncastlive" path="/org/gnome/shell/extensions/owncastlive/">
+
+    <key name="instances" type="s">
+      <default>''</default>
+      <summary>Owncast instances to monitor</summary>
+      <description>Comma-separated list of Owncast instance URLs (e.g., "owncast.example.com,stream.another.com")</description>
+    </key>
+
+    <key name="update-interval" type="i">
+      <default>5</default>
+      <range min="1" max="30"/>
+      <summary>Update interval in minutes</summary>
+      <description>How often to poll Owncast instances for status updates</description>
+    </key>
+
+    <key name="opencmd" type="s">
+      <default>'xdg-open https://%instance%'</default>
+      <summary>Command to open stream</summary>
+      <description>Command to execute when clicking on a streamer. %instance% will be replaced with the instance URL</description>
+    </key>
+
+    <key name="hideplaylists" type="b">
+      <default>false</default>
+      <summary>Hide when nobody is streaming</summary>
+      <description>Hide the panel icon when no streams are live</description>
+    </key>
+
+    <key name="notifications" type="b">
+      <default>true</default>
+      <summary>Enable notifications</summary>
+      <description>Show desktop notifications when streamers go live</description>
+    </key>
+
+    <key name="notification-icons" type="b">
+      <default>true</default>
+      <summary>Show instance icons in notifications</summary>
+      <description>Display the Owncast instance logo in notifications</description>
+    </key>
+
+    <key name="topbar-mode" type="s">
+      <default>'text_only'</default>
+      <summary>Topbar display mode</summary>
+      <description>How to display stream information in the top panel: text_only, count_only, or icon_only</description>
+    </key>
+
+    <key name="sort-key" type="s">
+      <default>'name'</default>
+      <summary>Sort streams by</summary>
+      <description>How to sort the stream list: name, viewers, or uptime</description>
+    </key>
+
+  </schema>
+</schemalist>
