@@ -25,6 +25,11 @@ function formatElapsedTime(startTimeStr) {
         const now = Date.now();
         const elapsedMs = now - startTime;
 
+        // Debug logging
+        if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
+            log(`OwncastLive: Start time: ${startTimeStr}, Elapsed: ${Math.floor(elapsedMs / 1000)}s`);
+        }
+
         if (elapsedMs < 0) {
             return '';
         }
@@ -54,6 +59,7 @@ class OwncastLiveExtension {
         this._indicator = null;
         this._updateTimeout = null;
         this._rotateTimeout = null;
+        this._timerTimeout = null;
         this._instanceData = [];
         this._previousOnlineStates = new Map();
         this._rotationIndex = 0;
@@ -81,6 +87,7 @@ class OwncastLiveExtension {
         this._updateData();
         this._scheduleUpdate();
         this._scheduleRotation();
+        this._scheduleTimer();
     }
 
     disable() {
@@ -93,6 +100,11 @@ class OwncastLiveExtension {
         if (this._rotateTimeout) {
             GLib.Source.remove(this._rotateTimeout);
             this._rotateTimeout = null;
+        }
+
+        if (this._timerTimeout) {
+            GLib.Source.remove(this._timerTimeout);
+            this._timerTimeout = null;
         }
 
         // Disconnect settings
@@ -145,6 +157,22 @@ class OwncastLiveExtension {
             this._rotationIndex++;
             this._updateDisplay();
             this._scheduleRotation();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * Schedules the timer update (every second for live counting)
+     */
+    _scheduleTimer() {
+        if (this._timerTimeout) {
+            GLib.Source.remove(this._timerTimeout);
+        }
+
+        this._timerTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            // Only update display to refresh elapsed time
+            this._updateDisplay();
+            this._scheduleTimer();
             return GLib.SOURCE_REMOVE;
         });
     }

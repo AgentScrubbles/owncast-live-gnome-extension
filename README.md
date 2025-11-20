@@ -1,11 +1,14 @@
 # OwncastLive Panel - GNOME Shell Extension
 
-A GNOME Shell extension that monitors your favorite Owncast instances and notifies you when they go live.
+A GNOME Shell extension that monitors your favorite [Owncast](https://owncast.online) instances and notifies you when they go live.
+
+[Owncast](https://github.com/owncast/owncast) is a free and open source live streaming platform that lets you run your own self-hosted streaming server. This extension helps you keep track of multiple Owncast streamers right from your GNOME desktop.
 
 ## Features
 
 - Monitor multiple Owncast instances
 - Desktop notifications when streams go live
+- Live elapsed time counter showing how long streams have been live
 - Multiple display modes (text, count, icons)
 - Configurable poll interval (1-30 minutes)
 - Click to open streams in your browser
@@ -153,10 +156,14 @@ owncastlive-extension/
 
 ## Credits
 
-Inspired by and adapted from:
-- [TwitchLive Panel](https://github.com/maweki/twitchlive-extension) by maweki
+Built for [Owncast](https://owncast.online), the free and open source self-hosted live streaming platform.
 
-Built for the [Owncast](https://github.com/owncast/owncast) self-hosted streaming platform.
+**Owncast** is developed and maintained by [Gabe Kangas](https://github.com/gabek) and the Owncast community. Learn more and support the project:
+- Website: [owncast.online](https://owncast.online)
+- GitHub: [github.com/owncast/owncast](https://github.com/owncast/owncast)
+- Directory: [owncast.directory](https://owncast.directory)
+
+This extension was inspired by and adapted from the [TwitchLive Panel](https://github.com/maweki/twitchlive-extension) by maweki.
 
 ## License
 
