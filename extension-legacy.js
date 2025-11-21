@@ -1,47 +1,78 @@
+const {GLib, Gio, St, Clutter} = imports.gi;
+const Main = imports.ui.main;
+const PanelMenu = imports.ui.panelMenu;
+const PopupMenu = imports.ui.popupMenu;
+const MessageTray = imports.ui.messageTray;
+
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Api = Me.imports.api;
+const Icons = Me.imports.icons;
+const TopbarDisplay = Me.imports.topbar.TopbarDisplay;
+
 /**
- * OwncastLive Panel Extension - ESM version for GNOME 45+
- * Monitors Owncast streaming instances and notifies when streams go live
+ * Formats elapsed time from a start time to now
+ * @param {string} startTimeStr - ISO 8601 timestamp
+ * @returns {string} Formatted elapsed time like [4:35] or [1:23:45]
  */
+function formatElapsedTime(startTimeStr) {
+    if (!startTimeStr) {
+        return '';
+    }
 
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
-import St from 'gi://St';
-import Clutter from 'gi://Clutter';
-import Soup from 'gi://Soup?version=3.0';
+    try {
+        const startTime = new Date(startTimeStr).getTime();
+        const now = Date.now();
+        const elapsedMs = now - startTime;
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
+        // Debug logging
+        if (Math.random() < 0.01) { // Log 1% of the time to avoid spam
+            log(`OwncastLive: Start time: ${startTimeStr}, Elapsed: ${Math.floor(elapsedMs / 1000)}s`);
+        }
 
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+        if (elapsedMs < 0) {
+            return '';
+        }
 
-import { getInstanceData } from './impl/api.js';
-import { getIcon } from './impl/icons.js';
-import { TopbarDisplay } from './impl/topbar.js';
-import { sendNotification, formatElapsedTime } from './impl/compat.js';
+        const totalSeconds = Math.floor(elapsedMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
 
-export default class OwncastLiveExtension extends Extension {
-    enable() {
-        this._settings = this.getSettings('org.gnome.shell.extensions.owncastlive');
-        this._instanceData = [];
-        this._previousOnlineStates = new Map();
-        this._rotationIndex = 0;
+        if (hours > 0) {
+            return `[${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+        } else {
+            return `[${minutes}:${seconds.toString().padStart(2, '0')}]`;
+        }
+    } catch (error) {
+        log(`OwncastLive: Error formatting elapsed time: ${error.message}`);
+        return '';
+    }
+}
+
+/**
+ * Main extension class
+ */
+class OwncastLiveExtension {
+    constructor() {
+        this._settings = null;
+        this._indicator = null;
         this._updateTimeout = null;
         this._rotateTimeout = null;
         this._timerTimeout = null;
+        this._instanceData = [];
+        this._previousOnlineStates = new Map();
+        this._rotationIndex = 0;
+    }
+
+    enable() {
+        this._settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.owncastlive');
 
         // Create the panel button
         this._indicator = new PanelMenu.Button(0.0, 'OwncastLive', false);
 
         // Create topbar display
-        this._topbar = new TopbarDisplay({
-            St,
-            Clutter,
-            Gio,
-            GLib,
-            extensionPath: this.path
-        });
+        this._topbar = new TopbarDisplay();
         this._indicator.add_child(this._topbar.getWidget());
 
         // Add to panel
@@ -57,8 +88,6 @@ export default class OwncastLiveExtension extends Extension {
         this._scheduleUpdate();
         this._scheduleRotation();
         this._scheduleTimer();
-
-        console.log('OwncastLive: Extension enabled (ESM)');
     }
 
     disable() {
@@ -96,10 +125,6 @@ export default class OwncastLiveExtension extends Extension {
         }
 
         this._settings = null;
-        this._instanceData = [];
-        this._previousOnlineStates.clear();
-
-        console.log('OwncastLive: Extension disabled');
     }
 
     /**
@@ -167,13 +192,13 @@ export default class OwncastLiveExtension extends Extension {
 
         try {
             // Fetch data from all instances in parallel
-            const promises = instances.map(instance => getInstanceData(Soup, GLib, instance));
+            const promises = instances.map(instance => Api.getInstanceData(instance));
             const results = await Promise.all(promises);
 
             // Cache icons for instances that have them
             for (const data of results) {
                 if (data.logo) {
-                    const iconPath = await getIcon(Soup, GLib, Gio, data.instance, data.logo);
+                    const iconPath = await Icons.getIcon(data.instance, data.logo);
                     if (iconPath) {
                         data.iconPath = iconPath;
                     }
@@ -184,7 +209,7 @@ export default class OwncastLiveExtension extends Extension {
             this._checkForNewStreams();
             this._updateDisplay();
         } catch (error) {
-            console.error(`OwncastLive: Failed to update data: ${error.message}`);
+            log(`OwncastLive: Failed to update data: ${error.message}`);
         }
     }
 
@@ -217,17 +242,24 @@ export default class OwncastLiveExtension extends Extension {
     _sendNotification(instance) {
         const title = `${instance.name} is live!`;
         const body = instance.streamTitle || 'Stream has started';
-        const useIcon = this._settings.get_boolean('notification-icons');
 
-        sendNotification({
-            Main,
-            MessageTray,
-            Gio,
-            title,
-            body,
-            iconPath: instance.iconPath,
-            useIcon
-        });
+        const source = new MessageTray.Source('OwncastLive', 'emblem-videos-symbolic');
+        Main.messageTray.add(source);
+
+        const notification = new MessageTray.Notification(source, title, body);
+
+        // Add icon if available and enabled
+        if (this._settings.get_boolean('notification-icons') && instance.iconPath) {
+            try {
+                const file = Gio.File.new_for_path(instance.iconPath);
+                const icon = new Gio.FileIcon({ file });
+                notification.setIcon(icon);
+            } catch (error) {
+                log(`OwncastLive: Failed to set notification icon: ${error.message}`);
+            }
+        }
+
+        source.showNotification(notification);
     }
 
     /**
@@ -296,10 +328,10 @@ export default class OwncastLiveExtension extends Extension {
             item.connect('activate', () => {
                 try {
                     const command = openCommand.replace('%instance%', instance.instance);
-                    console.log(`OwncastLive: Opening stream with command: ${command}`);
+                    log(`OwncastLive: Opening stream with command: ${command}`);
                     GLib.spawn_command_line_async(command);
                 } catch (error) {
-                    console.error(`OwncastLive: Failed to open stream: ${error.message}`);
+                    log(`OwncastLive: Failed to open stream: ${error.message}`);
                 }
             });
 
@@ -336,5 +368,25 @@ export default class OwncastLiveExtension extends Extension {
 
         // Update display immediately
         this._updateData();
+    }
+}
+
+let extension = null;
+
+function init() {
+    log('OwncastLive: Initializing extension');
+}
+
+function enable() {
+    log('OwncastLive: Enabling extension');
+    extension = new OwncastLiveExtension();
+    extension.enable();
+}
+
+function disable() {
+    log('OwncastLive: Disabling extension');
+    if (extension) {
+        extension.disable();
+        extension = null;
     }
 }
