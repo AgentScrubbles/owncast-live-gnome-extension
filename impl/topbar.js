@@ -63,15 +63,8 @@ class TopbarDisplay {
         });
 
         // Owncast icon (shown when streaming)
-        const iconPath = GLib.build_filenamev([extensionPath, 'owncast-icon.svg']);
-        const iconFile = Gio.File.new_for_path(iconPath);
-        const iconGicon = new Gio.FileIcon({ file: iconFile });
-
-        this.broadcastIcon = new St.Icon({
-            gicon: iconGicon,
-            style_class: 'system-status-icon',
-            icon_size: 16
-        });
+        // Try symbolic icon first (adapts to theme), then original, then system fallback
+        this.broadcastIcon = this._createBroadcastIcon(GLib, Gio, extensionPath);
 
         this.icon = new St.Icon({
             style_class: 'system-status-icon',
@@ -208,6 +201,47 @@ class TopbarDisplay {
         // Fallback to text if no icon available
         this.label.set_text(instance.name || instance.instance);
         this.container.add_child(this.label);
+    }
+
+    /**
+     * Creates the broadcast icon with fallback options
+     * @param {Object} GLib - The GLib module
+     * @param {Object} Gio - The Gio module
+     * @param {string} extensionPath - Path to the extension directory
+     * @returns {St.Icon} The created icon
+     */
+    _createBroadcastIcon(GLib, Gio, extensionPath) {
+        // Try symbolic icon first (adapts to theme colors)
+        const iconFiles = [
+            'owncast-symbolic.svg',
+            'owncast-icon.svg'
+        ];
+
+        for (const iconName of iconFiles) {
+            try {
+                const iconPath = GLib.build_filenamev([extensionPath, iconName]);
+                const iconFile = Gio.File.new_for_path(iconPath);
+
+                if (iconFile.query_exists(null)) {
+                    const gicon = Gio.icon_new_for_string(iconPath);
+                    return new this._St.Icon({
+                        gicon: gicon,
+                        style_class: 'system-status-icon',
+                        icon_size: 16
+                    });
+                }
+            } catch (error) {
+                console.log(`OwncastLive: Could not load ${iconName}: ${error.message}`);
+            }
+        }
+
+        // Fallback to system icon
+        console.log('OwncastLive: Using fallback system icon');
+        return new this._St.Icon({
+            icon_name: 'emblem-videos-symbolic',
+            style_class: 'system-status-icon',
+            icon_size: 16
+        });
     }
 
     /**

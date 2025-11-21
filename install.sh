@@ -35,6 +35,7 @@ mkdir -p "$EXTENSION_DIR/schemas"
 cp metadata.json "$EXTENSION_DIR/"
 cp stylesheet.css "$EXTENSION_DIR/"
 cp owncast-icon.svg "$EXTENSION_DIR/"
+cp owncast-symbolic.svg "$EXTENSION_DIR/"
 cp schemas/*.xml "$EXTENSION_DIR/schemas/"
 
 # Copy files based on GNOME version
